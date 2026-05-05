@@ -489,11 +489,12 @@ crawler:
 
 Connects to an **already-running** browser that exposes a [WebDriver BiDi](https://w3c.github.io/webdriver-bidi/) WebSocket endpoint. This is the W3C-standard automation protocol supported by Firefox (≥ 102), Chrome (≥ 106), Edge, and other modern browsers. Unlike `chromedp`, the `bidi` backend does **not** launch a browser process — it reuses one you have started yourself (headless or not).
 
-| Option   | Type   | Default       | Description                                                                                       |
-| -------- | ------ | ------------- | ------------------------------------------------------------------------------------------------- |
-| `socket` | string | (none)        | Full WebSocket URL (e.g. `ws://127.0.0.1:9222/session`). When set, `host` and `port` are ignored. |
-| `host`   | string | `127.0.0.1`   | Hostname or IP of the browser's BiDi endpoint.                                                    |
-| `port`   | string | `9222`        | Port of the browser's BiDi endpoint.                                                              |
+| Option          | Type   | Default       | Description                                                                                       |
+| --------------- | ------ | ------------- | ------------------------------------------------------------------------------------------------- |
+| `socket`        | string | (none)        | Full WebSocket URL (e.g. `ws://127.0.0.1:9222/session`). When set, `host` and `port` are ignored. |
+| `host`          | string | `127.0.0.1`   | Hostname or IP of the browser's BiDi endpoint.                                                    |
+| `port`          | string | `9222`        | Port of the browser's BiDi endpoint.                                                              |
+| `capture_delay` | float  | `0`           | Seconds to wait after page load before capturing HTML. Useful for pages that rely on JS rendering. |
 
 Start your browser with BiDi enabled, for example:
 
@@ -513,6 +514,7 @@ crawler:
   backend_options:
     host: '127.0.0.1'
     port: '9222'
+    capture_delay: 1.5   # wait 1.5s after load for JS to render
   timeout: 15
 ```
 

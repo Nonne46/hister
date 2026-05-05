@@ -21,8 +21,9 @@ import (
 // protocol. It talks directly to the browser over a WebSocket — no external
 // driver binary or library needed.
 type bidiFetcher struct {
-	conn    *websocket.Conn
-	timeout time.Duration
+	conn         *websocket.Conn
+	timeout      time.Duration
+	captureDelay time.Duration // extra wait after navigation before capturing HTML
 
 	// Command-response bookkeeping.
 	nextID  uint64
@@ -47,13 +48,15 @@ type bidiResult struct {
 //   - "socket" (string): full WebSocket URL, e.g. "ws://127.0.0.1:9222/session"
 //   - "host" (string): hostname or IP, defaults to "127.0.0.1"
 //   - "port" (string|int): port number, defaults to "9222"
+//   - "capture_delay" (float): seconds to wait after page load before capturing HTML (default: 0)
 //
 // When "socket" is provided, "host" and "port" are ignored.
 func newBidiFetcher(cfg *config.CrawlerConfig) (*bidiFetcher, error) {
 	knownOptions := map[string]struct{}{
-		"socket": {},
-		"host":   {},
-		"port":   {},
+		"socket":        {},
+		"host":          {},
+		"port":          {},
+		"capture_delay": {},
 	}
 	for k := range cfg.BackendOptions {
 		if _, ok := knownOptions[k]; !ok {
@@ -82,10 +85,32 @@ func newBidiFetcher(cfg *config.CrawlerConfig) (*bidiFetcher, error) {
 		timeout = defaultTimeout
 	}
 
+	var captureDelay time.Duration
+	if cd, ok := cfg.BackendOptions["capture_delay"]; ok {
+		switch v := cd.(type) {
+		case float64:
+			captureDelay = time.Duration(v * float64(time.Second))
+		case int:
+			captureDelay = time.Duration(v) * time.Second
+		case string:
+			d, err := time.ParseDuration(v)
+			if err != nil {
+				return nil, fmt.Errorf("bidi backend: invalid capture_delay %q: %w", v, err)
+			}
+			captureDelay = d
+		default:
+			return nil, fmt.Errorf("bidi backend: capture_delay must be a number (seconds)")
+		}
+		if captureDelay > 0 {
+			log.Debug().Dur("capture_delay", captureDelay).Msg("bidi: capture delay configured")
+		}
+	}
+
 	f := &bidiFetcher{
-		conn:    conn,
-		timeout: timeout,
-		done:    make(chan struct{}),
+		conn:         conn,
+		timeout:      timeout,
+		captureDelay: captureDelay,
+		done:         make(chan struct{}),
 	}
 
 	go f.readLoop()
@@ -292,6 +317,16 @@ func (f *bidiFetcher) fetchPage(ctx context.Context, rawURL string) (string, str
 	finalURL := nav.URL
 	if finalURL == "" {
 		finalURL = rawURL
+	}
+
+	// Optional extra wait for slow-loading pages (JS rendering, etc.).
+	if f.captureDelay > 0 {
+		log.Debug().Dur("delay", f.captureDelay).Str("url", rawURL).Msg("bidi: waiting before capture")
+		select {
+		case <-time.After(f.captureDelay):
+		case <-timeoutCtx.Done():
+			return "", "", nil, fmt.Errorf("bidi: capture delay interrupted: %w", timeoutCtx.Err())
+		}
 	}
 
 	// Extract the full page HTML using script.evaluate.
