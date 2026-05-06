@@ -49,6 +49,10 @@ Bugs or suggestions? Visit the [issue tracker](https://github.com/asciimoo/histe
 
 Security related issue? See our [SECURITY.md](SECURITY.md)
 
+## Sponsors
+
+[![Uruky](webui/website/static/uruky.svg)](https://uruky.com/)
+
 ## License
 
 [AGPLv3](LICENSE) or any later version
