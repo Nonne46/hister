@@ -105,10 +105,16 @@
 
   function addRule() {
     if (!newRulePattern.trim()) return;
+    const pattern = newRulePattern.trim();
+    if (rules.skip.includes(pattern) || rules.priority.includes(pattern)) {
+      message = `Rule "${pattern}" already exists.`;
+      isError = true;
+      return;
+    }
     if (newRuleType === 'skip') {
-      rules.skip = [...rules.skip, newRulePattern.trim()];
+      rules.skip = [...rules.skip, pattern];
     } else {
-      rules.priority = [...rules.priority, newRulePattern.trim()];
+      rules.priority = [...rules.priority, pattern];
     }
     newRulePattern = '';
     saveRules();
@@ -199,6 +205,15 @@
     const trimmed = editRulePattern.trim();
     if (!trimmed) return;
     const row = ruleRows[editingRuleIndex!];
+    // Reject if the new pattern already exists elsewhere (different item)
+    const isDuplicate =
+      (rules.skip.includes(trimmed) || rules.priority.includes(trimmed)) && trimmed !== row.pattern;
+    if (isDuplicate) {
+      message = `Rule "${trimmed}" already exists.`;
+      isError = true;
+      editingRuleIndex = null;
+      return;
+    }
     // Update in the appropriate array
     if (row.type === 'skip') {
       rules.skip = rules.skip.map((p) => (p === row.pattern ? trimmed : p));
