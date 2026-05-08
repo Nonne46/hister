@@ -32,3 +32,45 @@ export function withSkipUrl(skip: { value: boolean }, fn: () => void): void {
     skip.value = false;
   });
 }
+
+/**
+ * Creates a mouse-drag resize handler for a panel on the right side of a flex container.
+ * The panel width is expressed as a percentage of the container's total width.
+ *
+ * @param opts.getContainer  Returns the flex container element.
+ * @param opts.onWidth       Called continuously during drag with the new percentage.
+ * @param opts.onDone        Called once on mouseup with the final percentage (use for persistence).
+ * @param opts.min           Minimum percentage (default 15).
+ * @param opts.max           Maximum percentage (default 85).
+ */
+export function createResizeHandler(opts: {
+  getContainer: () => HTMLElement | undefined;
+  onWidth: (pct: number) => void;
+  onDone: (pct: number) => void;
+  min?: number;
+  max?: number;
+}): (e: MouseEvent) => void {
+  return function startResize(e: MouseEvent) {
+    e.preventDefault();
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    let lastPct = 50;
+    const onMove = (e: MouseEvent) => {
+      const container = opts.getContainer();
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const fromRight = rect.right - e.clientX;
+      lastPct = Math.min(opts.max ?? 85, Math.max(opts.min ?? 15, (fromRight / rect.width) * 100));
+      opts.onWidth(lastPct);
+    };
+    const onUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      opts.onDone(lastPct);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+}

@@ -5,6 +5,7 @@
     pushPreviewHistory,
     replacePreviewHistory,
     withSkipUrl,
+    createResizeHandler,
   } from '$lib/preview';
   import { page } from '$app/stores';
   import {
@@ -113,6 +114,17 @@
   let panelHintTitle = $state('');
   let isDesktop = $state(false);
   let panelOpen = $state(true);
+  let panelWidthPct = $state(parseFloat(localStorage.getItem('hister-panel-width') ?? '') || 50);
+  let splitContainerEl: HTMLDivElement | undefined = $state();
+  const startPanelResize = createResizeHandler({
+    getContainer: () => splitContainerEl,
+    onWidth: (pct) => {
+      panelWidthPct = pct;
+    },
+    onDone: (pct) => {
+      localStorage.setItem('hister-panel-width', String(pct));
+    },
+  });
 
   let resultsShown = $state(false);
 
@@ -982,7 +994,7 @@
   // the semantic weight slider also refreshes the panel.
   // Uses data instead of DOM queries so it works when results are hidden (fullscreen mode).
   // highlightIdx spans all results: 0..historyLen-1 are priority results,
-  // historyLen..totalResults-1 are merged results — look up accordingly.
+  // historyLen..totalResults-1 are merged results, look up accordingly.
   $effect(() => {
     const idx = highlightIdx;
     const priorityResults = (lastResults?.history as SearchResult[] | undefined) ?? [];
@@ -1272,7 +1284,7 @@
       </span>
     {/if}
 
-    <div class="flex min-h-0 flex-1 overflow-hidden">
+    <div class="flex min-h-0 flex-1 overflow-hidden" bind:this={splitContainerEl}>
       {#if !previewFullscreen}
         <ScrollArea class="min-h-0 flex-1">
           <div class="w-full max-w-[70em] space-y-3 overflow-x-hidden px-3 py-2 md:px-12">
@@ -1860,16 +1872,26 @@
           onfullscreentoggle={isDesktop ? exitFullscreen : undefined}
         />
       {:else if lastResults && panelOpen && isDesktop}
-        <PreviewPanel
-          url={panelUrl}
-          hintTitle={panelHintTitle}
-          fullscreen={false}
-          onclose={() => {
-            panelOpen = false;
-            localStorage.setItem('hister-panel-open', 'false');
-          }}
-          onfullscreentoggle={enterFullscreen}
-        />
+        <!-- Drag handle to resize the split-screen panel -->
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <div
+          class="hover:bg-hister-indigo/40 w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors"
+          onmousedown={startPanelResize}
+          role="separator"
+          aria-label="Resize preview panel"
+        ></div>
+        <div style="width: {panelWidthPct}%; flex: none;" class="flex min-h-0 overflow-hidden">
+          <PreviewPanel
+            url={panelUrl}
+            hintTitle={panelHintTitle}
+            fullscreen={false}
+            onclose={() => {
+              panelOpen = false;
+              localStorage.setItem('hister-panel-open', 'false');
+            }}
+            onfullscreentoggle={enterFullscreen}
+          />
+        </div>
       {/if}
     </div>
   </div>

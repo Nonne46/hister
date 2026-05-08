@@ -4,6 +4,7 @@
     pushPreviewHistory,
     replacePreviewHistory,
     withSkipUrl,
+    createResizeHandler,
   } from '$lib/preview';
   import { onMount, untrack } from 'svelte';
   import { fetchConfig, apiFetch, getUserId } from '$lib/api';
@@ -48,6 +49,17 @@
   );
   let previewFullscreen = $state(false);
   const skipUrl = { value: false };
+  let panelWidthPct = $state(parseFloat(localStorage.getItem('hister-panel-width') ?? '') || 50);
+  let splitContainerEl: HTMLDivElement | undefined = $state();
+  const startPanelResize = createResizeHandler({
+    getContainer: () => splitContainerEl,
+    onWidth: (pct) => {
+      panelWidthPct = pct;
+    },
+    onDone: (pct) => {
+      localStorage.setItem('hister-panel-width', String(pct));
+    },
+  });
 
   // --- History state helpers ---
 
@@ -556,7 +568,7 @@
       {/each}
     </div>
 
-    <div class="flex min-h-0 flex-1 overflow-hidden">
+    <div class="flex min-h-0 flex-1 overflow-hidden" bind:this={splitContainerEl}>
       {#if !previewFullscreen}
         <ScrollArea
           orientation="vertical"
@@ -652,16 +664,26 @@
           onfullscreentoggle={isDesktop ? exitFullscreen : undefined}
         />
       {:else if panelOpen && isDesktop}
-        <PreviewPanel
-          url={panelUrl}
-          hintTitle={panelHintTitle}
-          fullscreen={false}
-          onclose={() => {
-            panelOpen = false;
-            localStorage.setItem('hister-history-panel-open', 'false');
-          }}
-          onfullscreentoggle={enterFullscreen}
-        />
+        <!-- Drag handle to resize the split-screen panel -->
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <div
+          class="hover:bg-hister-indigo/40 w-1.5 shrink-0 cursor-col-resize bg-transparent transition-colors"
+          onmousedown={startPanelResize}
+          role="separator"
+          aria-label="Resize preview panel"
+        ></div>
+        <div style="width: {panelWidthPct}%; flex: none;" class="flex min-h-0 overflow-hidden">
+          <PreviewPanel
+            url={panelUrl}
+            hintTitle={panelHintTitle}
+            fullscreen={false}
+            onclose={() => {
+              panelOpen = false;
+              localStorage.setItem('hister-history-panel-open', 'false');
+            }}
+            onfullscreentoggle={enterFullscreen}
+          />
+        </div>
       {/if}
     </div>
   </div>
