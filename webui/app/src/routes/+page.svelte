@@ -981,12 +981,16 @@
   // Tracks mergedResults (not just lastResults) so that reordering caused by
   // the semantic weight slider also refreshes the panel.
   // Uses data instead of DOM queries so it works when results are hidden (fullscreen mode).
+  // highlightIdx spans all results: 0..historyLen-1 are priority results,
+  // historyLen..totalResults-1 are merged results — look up accordingly.
   $effect(() => {
     const idx = highlightIdx;
+    const priorityResults = (lastResults?.history as SearchResult[] | undefined) ?? [];
     const results = mergedResults; // reactive dependency: reorders trigger this
     const isFullscreen = previewFullscreen;
-    if (!isDesktop || !results.length || (!panelOpen && !isFullscreen)) return;
-    const result = results[idx];
+    if (!isDesktop || (!panelOpen && !isFullscreen)) return;
+    const result =
+      idx < priorityResults.length ? priorityResults[idx] : results[idx - priorityResults.length];
     if (!result) return;
     const url = result.url;
     if (url === untrack(() => panelUrl)) return;
