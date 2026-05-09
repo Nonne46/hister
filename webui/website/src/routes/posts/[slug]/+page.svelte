@@ -18,6 +18,8 @@
   <meta property="article:section" content="Post" />
   {#if data.meta.image}
     <meta property="og:image" content="{SITE_URL}/posts/{data.meta.image as string}" />
+    <meta property="twitter:image" content="{SITE_URL}/posts/{data.meta.image as string}" />
+    <meta name="twitter:card" content="summary_large_image" />
   {/if}
 </svelte:head>
 
