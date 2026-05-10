@@ -1,6 +1,7 @@
 package querybuilder
 
 import (
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -53,7 +54,15 @@ func Build(s string) query.Query {
 			),
 		}
 	}
-	return query.NewBooleanQuery(qs, nil, nqs)
+	q := query.NewBooleanQuery(qs, nil, nqs)
+	if len(qt) == 1 && !isFieldSpecific(qt[0]) {
+		// prioritize base url matches if there is only one non field specific search term for easier retrieval of websites.
+		uq := bleve.NewRegexpQuery(fmt.Sprintf("https?://(www\\.)?%s[^/]*/", strings.ToLower(qt[0].Value)))
+		uq.SetField("url")
+		uq.SetBoost(100)
+		q.AddShould(uq)
+	}
+	return q
 }
 
 // anyFieldSpecific returns true when at least one token in qt is an explicit
