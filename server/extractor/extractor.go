@@ -22,6 +22,7 @@ import (
 	"github.com/asciimoo/hister/server/extractor/extractors/jsonld"
 	"github.com/asciimoo/hister/server/extractor/extractors/lobsters"
 	"github.com/asciimoo/hister/server/extractor/extractors/mastodon"
+	"github.com/asciimoo/hister/server/extractor/extractors/notion"
 	"github.com/asciimoo/hister/server/extractor/extractors/stackoverflow"
 	"github.com/asciimoo/hister/server/extractor/extractors/wikipedia"
 	"github.com/asciimoo/hister/server/extractor/extractors/ytdlp"
@@ -98,6 +99,7 @@ var extractors = []Extractor{
 	&lobsters.LobstersExtractor{},
 	&wikipedia.WikipediaExtractor{},
 	&mastodon.MastodonExtractor{},
+	&notion.NotionExtractor{},
 	&ytdlp.YtdlpExtractor{},
 	&readabilityExtractor{},
 	&defaultExtractor{},
