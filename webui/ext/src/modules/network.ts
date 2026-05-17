@@ -57,6 +57,7 @@ async function fetchAPI(
     method: options.method ?? (fetchBody !== undefined ? 'POST' : 'GET'),
     headers,
     body: fetchBody,
+    credentials: 'include',
   });
 }
 

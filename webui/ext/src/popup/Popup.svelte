@@ -54,7 +54,7 @@
       if (cookies) {
         headers['Cookie'] = cookies;
       }
-      return fetch(authURL + 'api/profile', { headers })
+      return fetch(authURL + 'api/profile', { headers, credentials: 'include' })
         .then((r) => {
           if (r.status === 403) {
             isAuthenticated = false;
@@ -163,7 +163,7 @@
       }
     }
 
-    fetch(verifyURL + 'api/config', { headers })
+    fetch(verifyURL + 'api/config', { headers, credentials: 'include' })
       .then((response) => {
         if (response.status !== 200) {
           setErrorMessage(`Server returned status ${response.status}`);
@@ -270,6 +270,7 @@
         method: 'POST',
         headers,
         body: JSON.stringify({ url: tabURL, label: pageLabel }),
+        credentials: 'include',
       });
       if (res.ok) {
         pageLabel = '';
