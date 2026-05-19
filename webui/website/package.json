@@ -8,16 +8,16 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@lucide/svelte": "^1.14.0",
+    "@lucide/svelte": "^1.16.0",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.59.1",
+    "@sveltejs/kit": "^2.60.1",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tailwindcss/vite": "^4.3.0",
     "mdsvex": "^0.12.7",
     "shiki": "^4.0.2",
-    "svelte": "^5.55.5",
+    "svelte": "^5.55.8",
     "tailwindcss": "^4.2.1",
-    "vite": "^8.0.12"
+    "vite": "^8.0.13"
   },
   "dependencies": {
     "@fontsource/fira-code": "^5.2.7",
