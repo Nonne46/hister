@@ -1515,6 +1515,7 @@ const (
 	batchOpGet  = "get"
 )
 
+// TODO handle data dir updates
 func serveBatch(c *webContext) {
 	c.Request.Body = http.MaxBytesReader(c.Response, c.Request.Body, 5<<20) // 5 MB
 	var req batchRequest
