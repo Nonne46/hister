@@ -284,24 +284,95 @@ func getDefaultDataDir() string {
 }
 
 func readConfigFile(filename string) ([]byte, string, error) {
+	// If a specific config file is provided, use it directly
 	b, err := os.ReadFile(filename)
 	if err == nil {
 		return b, filename, nil
 	}
+
 	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		filename = filepath.Join(homeDir, ".histerrc")
-		b, err = os.ReadFile(filename)
+	if err != nil {
+		return nil, "", errors.New("configuration file not found. Use --config to specify a custom config file")
+	}
+
+	// List of paths to search for config file, in order of preference
+	paths := getConfigSearchPaths(homeDir)
+
+	for _, path := range paths {
+		b, err := os.ReadFile(path)
 		if err == nil {
-			return b, filename, nil
-		}
-		filename = filepath.Join(homeDir, ".config/hister/config.yml")
-		b, err = os.ReadFile(filename)
-		if err == nil {
-			return b, filename, nil
+			// Check if this is the deprecated ~/.histerrc path and warn if so
+			if strings.HasSuffix(path, ".histerrc") {
+				log.Warn().
+					Str("oldPath", path).
+					Str("newPath", paths[0]).
+					Msg("Configuration file found at deprecated location ~/.histerrc. Please move it to the recommended location for your OS")
+			}
+			return b, path, nil
 		}
 	}
-	return b, "", errors.New("configuration file not found. Use --config to specify a custom config file")
+
+	return nil, "", errors.New("configuration file not found. Use --config to specify a custom config file")
+}
+
+// getConfigSearchPaths returns the list of paths to search for config files
+// in order of preference, respecting XDG Base Directory standards.
+func getConfigSearchPaths(homeDir string) []string {
+	var paths []string
+
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS: XDG_CONFIG_HOME defaults to ~/Library/Preferences
+		xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+		if xdgConfig == "" {
+			xdgConfig = filepath.Join(homeDir, "Library/Preferences")
+		}
+		paths = append(paths, filepath.Join(xdgConfig, "hister/config.yml"))
+
+		// Application Support for backwards compatibility with some users
+		paths = append(paths, filepath.Join(homeDir, "Library/Application Support/hister/config.yml"))
+
+		// Legacy paths (for deprecation warning)
+		paths = append(paths, filepath.Join(homeDir, ".histerrc"))
+		paths = append(paths, filepath.Join(homeDir, ".config/hister/config.yml"))
+
+	case "windows":
+		// Windows: use LOCALAPPDATA
+		localAppData := os.Getenv("LOCALAPPDATA")
+		if localAppData != "" {
+			paths = append(paths, filepath.Join(localAppData, "hister/config.yml"))
+		}
+
+		// XDG_CONFIG_HOME if set
+		xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+		if xdgConfig != "" {
+			paths = append(paths, filepath.Join(xdgConfig, "hister/config.yml"))
+		}
+
+		// APPDATA fallback
+		appData := os.Getenv("APPDATA")
+		if appData != "" {
+			paths = append(paths, filepath.Join(appData, "hister/config.yml"))
+		}
+
+		// Legacy paths
+		paths = append(paths, filepath.Join(homeDir, ".histerrc"))
+		paths = append(paths, filepath.Join(homeDir, ".config/hister/config.yml"))
+
+	default:
+		// Linux and other Unix-like systems: follow XDG Base Directory
+		xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+		if xdgConfig != "" {
+			paths = append(paths, filepath.Join(xdgConfig, "hister/config.yml"))
+		} else {
+			paths = append(paths, filepath.Join(homeDir, ".config/hister/config.yml"))
+		}
+
+		// Legacy paths
+		paths = append(paths, filepath.Join(homeDir, ".histerrc"))
+	}
+
+	return paths
 }
 
 func loadViper(rawConfig []byte) (*viper.Viper, error) {
@@ -684,17 +755,13 @@ func (c *Config) SaveTUIConfig() error {
 }
 
 func (c *Config) defaultConfigPath() string {
-	switch runtime.GOOS {
-	case "darwin":
-		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, ".config/hister/config.yml")
-	default:
-		if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
-			return filepath.Join(xdgConfig, "hister/config.yml")
-		}
-		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, ".config/hister/config.yml")
+	homeDir, _ := os.UserHomeDir()
+	paths := getConfigSearchPaths(homeDir)
+	if len(paths) > 0 {
+		return paths[0]
 	}
+	// Fallback (shouldn't happen)
+	return filepath.Join(homeDir, ".config/hister/config.yml")
 }
 
 func (c *Config) BaseURL(u string) string {

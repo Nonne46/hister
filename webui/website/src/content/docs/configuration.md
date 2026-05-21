@@ -4,16 +4,59 @@ draft: false
 title: 'Configuration Reference'
 ---
 
-Hister is configured via a YAML file. The default location is:
+Hister is configured via a YAML file. The config file is searched in the following order:
 
-- **Linux**: `~/.config/hister/config.yml` (or `$XDG_DATA_HOME/hister/config.yml`)
-- **macOS**: `~/Library/Application Support/hister/config.yml`
-- **Windows**: `%LOCALAPPDATA%\hister\config.yml`
+### Default Config Locations
+
+**Linux** (respects `$XDG_CONFIG_HOME`):
+
+- `$XDG_CONFIG_HOME/hister/config.yml` (if `$XDG_CONFIG_HOME` is set)
+- `~/.config/hister/config.yml` (default)
+- `~/.histerrc` (legacy, deprecated)
+
+**macOS** (respects `$XDG_CONFIG_HOME`):
+
+- `$XDG_CONFIG_HOME/hister/config.yml` (if `$XDG_CONFIG_HOME` is set)
+- `~/Library/Preferences/hister/config.yml` (recommended)
+- `~/Library/Application Support/hister/config.yml` (backwards compatible)
+- `~/.histerrc` (legacy, deprecated)
+- `~/.config/hister/config.yml` (legacy)
+
+**Windows** (respects environment variables):
+
+- `%LOCALAPPDATA%\hister\config.yml` (recommended)
+- `$XDG_CONFIG_HOME\hister\config.yml` (if `$XDG_CONFIG_HOME` is set)
+- `%APPDATA%\hister\config.yml` (fallback)
+- `~\.histerrc` (legacy, deprecated)
+- `~\.config\hister\config.yml` (legacy)
+
+Hister searches these paths in order and uses the first config file it finds. If you have a legacy `~/.histerrc` file and Hister finds it, you'll see a deprecation warning suggesting you move it to the recommended location.
+
+### Creating a Config File
 
 Generate a config file with default values:
 
 ```bash
 hister create-config ~/.config/hister/config.yml
+```
+
+Or use your platform's recommended location:
+
+```bash
+# Linux
+hister create-config ~/.config/hister/config.yml
+
+# macOS
+hister create-config ~/Library/Preferences/hister/config.yml
+
+# Windows
+hister create-config %LOCALAPPDATA%\hister\config.yml
+```
+
+You can also specify a custom config location using the `--config` flag:
+
+```bash
+hister listen --config /path/to/my/config.yml
 ```
 
 **Important**: Restart the Hister server after modifying the configuration file.
