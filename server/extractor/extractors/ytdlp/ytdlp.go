@@ -214,6 +214,9 @@ func (e *YtdlpExtractor) fetchInfo(videoURL string) (*videoInfo, error) {
 	cmd := exec.CommandContext(ctx, e.binary(), args...)
 	out, err := cmd.Output()
 	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && len(exitErr.Stderr) > 0 {
+			return nil, fmt.Errorf("yt-dlp failed: %w: %s", err, strings.TrimSpace(string(exitErr.Stderr)))
+		}
 		return nil, fmt.Errorf("yt-dlp failed: %w", err)
 	}
 	var info videoInfo
