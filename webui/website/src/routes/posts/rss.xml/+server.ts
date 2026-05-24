@@ -56,7 +56,7 @@ export const GET: RequestHandler = () => {
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${escapeXml(FEED_TITLE)}</title>
-    <link>${SITE_URL}/posts/</link>
+    <link>${SITE_URL}/posts</link>
     <description>${escapeXml(FEED_DESCRIPTION)}</description>
     <language>en</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
