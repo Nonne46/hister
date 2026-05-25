@@ -501,109 +501,115 @@
 {:else}
   <div class="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
     <!-- Timeline sidebar: hidden on mobile, shown on md+ -->
-    <ScrollArea class="border-brutal-border hidden w-70 shrink-0 border-r-[3px] pt-5 pr-3 md:block">
-      <div class="space-y-1">
-        <span
-          class="font-space text-text-brand-muted flex items-center gap-1.5 px-2.5 text-xs font-bold tracking-[2px] uppercase"
-        >
-          <Clock class="size-3" />
-          Timeline
-        </span>
-        <Separator class="bg-border-brand-muted" />
+    {#if !previewFullscreen}
+      <ScrollArea
+        class="border-brutal-border hidden w-70 shrink-0 border-r-[3px] pt-5 pr-3 md:block"
+      >
+        <div class="space-y-1">
+          <span
+            class="font-space text-text-brand-muted flex items-center gap-1.5 px-2.5 text-xs font-bold tracking-[2px] uppercase"
+          >
+            <Clock class="size-3" />
+            Timeline
+          </span>
+          <Separator class="bg-border-brand-muted" />
 
+          <Button
+            variant="ghost"
+            class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none px-2.5 py-1.5 {!filterByDate
+              ? 'bg-hister-indigo text-white hover:bg-(--hister-indigo)/90 hover:text-white'
+              : 'hover:bg-muted-surface'}"
+            onclick={showAll}
+          >
+            <span
+              class="font-inter text-sm font-semibold"
+              class:text-text-brand-secondary={!!filterByDate}
+            >
+              Show All
+            </span>
+            <Badge
+              variant="secondary"
+              class="ml-auto h-4 shrink-0 border-0 px-1.5 py-0 text-xs {filterByDate
+                ? 'bg-muted-surface text-text-brand-muted'
+                : 'bg-white/20 text-white'}"
+            >
+              {items.length}
+            </Badge>
+          </Button>
+
+          <Separator class="bg-border-brand-muted" />
+
+          {#each allGroups as group, i}
+            {@const color = getGroupColor(i)}
+            {@const isActive = filterByDate === group.key}
+            <Button
+              variant="ghost"
+              class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none px-2.5 py-1.5 {isActive
+                ? 'text-white hover:text-white'
+                : 'hover:bg-muted-surface'}"
+              style={isActive ? `background-color: ${getColorVar(color)};` : ''}
+              onclick={() => scrollToGroup(group.key)}
+            >
+              <span
+                class="h-2 w-2 shrink-0 rounded-full"
+                style={isActive
+                  ? 'background-color: white;'
+                  : `background-color: ${getColorVar(color)};`}
+              ></span>
+              <span
+                class="font-inter truncate text-sm"
+                class:font-semibold={isActive}
+                class:font-medium={!isActive}
+                class:text-text-brand-secondary={!isActive}
+              >
+                {group.label}
+              </span>
+              <Badge
+                variant="secondary"
+                class="ml-auto h-4 shrink-0 border-0 px-1.5 py-0 text-xs {isActive
+                  ? 'bg-white/20 text-white'
+                  : 'bg-muted-surface text-text-brand-muted'}"
+              >
+                {group.items.length}
+              </Badge>
+            </Button>
+          {/each}
+        </div>
+      </ScrollArea>
+    {/if}
+
+    <!-- Mobile timeline: horizontal scrollable filter chips -->
+    {#if !previewFullscreen}
+      <div
+        class="border-brutal-border bg-card-surface flex shrink-0 items-center gap-2 overflow-x-auto border-b-[3px] px-4 py-2 md:hidden"
+      >
         <Button
           variant="ghost"
-          class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none px-2.5 py-1.5 {!filterByDate
-            ? 'bg-hister-indigo text-white hover:bg-(--hister-indigo)/90 hover:text-white'
-            : 'hover:bg-muted-surface'}"
+          size="sm"
+          class="font-inter h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold {!filterByDate
+            ? 'bg-hister-indigo hover:bg-hister-indigo/90 text-white hover:text-white'
+            : 'text-text-brand-secondary hover:bg-muted-surface'}"
           onclick={showAll}
         >
-          <span
-            class="font-inter text-sm font-semibold"
-            class:text-text-brand-secondary={!!filterByDate}
-          >
-            Show All
-          </span>
-          <Badge
-            variant="secondary"
-            class="ml-auto h-4 shrink-0 border-0 px-1.5 py-0 text-xs {filterByDate
-              ? 'bg-muted-surface text-text-brand-muted'
-              : 'bg-white/20 text-white'}"
-          >
-            {items.length}
-          </Badge>
+          All ({filteredItems.length})
         </Button>
-
-        <Separator class="bg-border-brand-muted" />
-
         {#each allGroups as group, i}
           {@const color = getGroupColor(i)}
           {@const isActive = filterByDate === group.key}
           <Button
             variant="ghost"
-            class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none px-2.5 py-1.5 {isActive
+            size="sm"
+            class="font-inter h-7 shrink-0 rounded-none px-2.5 text-xs font-medium {isActive
               ? 'text-white hover:text-white'
-              : 'hover:bg-muted-surface'}"
+              : 'text-text-brand-secondary hover:bg-muted-surface'}"
             style={isActive ? `background-color: ${getColorVar(color)};` : ''}
             onclick={() => scrollToGroup(group.key)}
           >
-            <span
-              class="h-2 w-2 shrink-0 rounded-full"
-              style={isActive
-                ? 'background-color: white;'
-                : `background-color: ${getColorVar(color)};`}
-            ></span>
-            <span
-              class="font-inter truncate text-sm"
-              class:font-semibold={isActive}
-              class:font-medium={!isActive}
-              class:text-text-brand-secondary={!isActive}
-            >
-              {group.label}
-            </span>
-            <Badge
-              variant="secondary"
-              class="ml-auto h-4 shrink-0 border-0 px-1.5 py-0 text-xs {isActive
-                ? 'bg-white/20 text-white'
-                : 'bg-muted-surface text-text-brand-muted'}"
-            >
-              {group.items.length}
-            </Badge>
+            {group.label} ({group.items.length})
           </Button>
         {/each}
       </div>
-    </ScrollArea>
-
-    <!-- Mobile timeline: horizontal scrollable filter chips -->
-    <div
-      class="border-brutal-border bg-card-surface flex shrink-0 items-center gap-2 overflow-x-auto border-b-[3px] px-4 py-2 md:hidden"
-    >
-      <Button
-        variant="ghost"
-        size="sm"
-        class="font-inter h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold {!filterByDate
-          ? 'bg-hister-indigo hover:bg-hister-indigo/90 text-white hover:text-white'
-          : 'text-text-brand-secondary hover:bg-muted-surface'}"
-        onclick={showAll}
-      >
-        All ({filteredItems.length})
-      </Button>
-      {#each allGroups as group, i}
-        {@const color = getGroupColor(i)}
-        {@const isActive = filterByDate === group.key}
-        <Button
-          variant="ghost"
-          size="sm"
-          class="font-inter h-7 shrink-0 rounded-none px-2.5 text-xs font-medium {isActive
-            ? 'text-white hover:text-white'
-            : 'text-text-brand-secondary hover:bg-muted-surface'}"
-          style={isActive ? `background-color: ${getColorVar(color)};` : ''}
-          onclick={() => scrollToGroup(group.key)}
-        >
-          {group.label} ({group.items.length})
-        </Button>
-      {/each}
-    </div>
+    {/if}
 
     <div class="flex min-h-0 flex-1 overflow-hidden" bind:this={splitContainerEl}>
       {#if !previewFullscreen}
