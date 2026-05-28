@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"unicode"
 )
@@ -13,8 +12,8 @@ import (
 // fetchSubtitleText dispatches subtitle downloading based on the sub_language config:
 //   - "auto": use the video's original language reported by yt-dlp
 //   - single value (e.g. "de"): download subtitles in that language if available
-//   - comma-separated list (e.g. "de,fr"): download subtitles only if the video's
-//     original language matches one of the listed languages
+//   - comma-separated list (e.g. "fr,en"): try each language in order, return the
+//     first one for which subtitles are available
 func (e *YtdlpExtractor) fetchSubtitleText(info *videoInfo) string {
 	langSpec := e.subLanguage()
 
@@ -30,16 +29,15 @@ func (e *YtdlpExtractor) fetchSubtitleText(info *videoInfo) string {
 		langs[i] = strings.TrimSpace(langs[i])
 	}
 
-	if len(langs) > 1 {
-		// Multiple languages: download only if the video's original language is in the list.
-		if info.Language == "" || !slices.Contains(langs, info.Language) {
-			return ""
+	for _, lang := range langs {
+		if lang == "" {
+			continue
 		}
-		return downloadSubtitleForLang(e, info, info.Language)
+		if text := downloadSubtitleForLang(e, info, lang); text != "" {
+			return text
+		}
 	}
-
-	// Single language: download in the specified language regardless of video's language.
-	return downloadSubtitleForLang(e, info, langs[0])
+	return ""
 }
 
 // downloadSubtitleForLang downloads subtitles for a single language code and returns
