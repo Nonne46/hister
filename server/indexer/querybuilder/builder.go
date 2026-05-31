@@ -112,14 +112,16 @@ func createCombinedMatchQuery(s string, boost float64) query.Query {
 	return q
 }
 
-// Matches any terms from the query
+// Matches all terms from the query (AND semantics per field)
 func createMatchQuery(s string, boost float64) query.Query {
 	tiq := bleve.NewMatchQuery(s)
 	tiq.SetField("title")
 	tiq.SetBoost(weights["title"])
+	tiq.Operator = query.MatchQueryOperatorAnd
 	teq := bleve.NewMatchQuery(s)
 	teq.SetField("text")
 	teq.SetBoost(weights["text"])
+	teq.Operator = query.MatchQueryOperatorAnd
 	q := bleve.NewDisjunctionQuery(tiq, teq)
 	q.SetBoost(boost)
 	return q
