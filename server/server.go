@@ -1183,11 +1183,19 @@ func serveGetFacets(c *webContext) {
 		Text:       params.Get("q"),
 		Facets:     true,
 		FacetsOnly: true,
+		FacetSizes: make(map[string]int),
 	}
 	for param, field := range map[string]*int64{"date_from": &q.DateFrom, "date_to": &q.DateTo} {
 		if v := params.Get(param); v != "" {
 			if t, err := strconv.ParseInt(v, 10, 64); err == nil {
 				*field = t
+			}
+		}
+	}
+	for key, vals := range params {
+		if name, ok := strings.CutPrefix(key, "size_"); ok && len(vals) > 0 {
+			if n, err := strconv.Atoi(vals[0]); err == nil && n > 0 {
+				q.FacetSizes[name] = n
 			}
 		}
 	}

@@ -419,9 +419,18 @@
   let facetsLoading = $state(false);
   let filtersDropdownOpen = $state(false);
   let actionsDropdownOpen = $state(false);
+  // Maps facet name (e.g. "domains", "languages") to the requested top-N size.
+  let facetSizes = $state(new Map<string, number>());
+
+  const DEFAULT_FACET_SIZE = 10;
+
+  function facetSize(name: string): number {
+    return facetSizes.get(name) ?? DEFAULT_FACET_SIZE;
+  }
 
   function facetsCacheKey(): string {
-    return `${query}|${dateFrom}|${dateTo}`;
+    const sizes = [...facetSizes.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return `${query}|${dateFrom}|${dateTo}|${JSON.stringify(sizes)}`;
   }
 
   const currentFacets = $derived(facetsCache.get(facetsCacheKey()));
@@ -439,6 +448,9 @@
       if (dateTo) {
         params.set('date_to', String(Math.floor(new Date(dateTo).getTime() / 1000)));
       }
+      for (const [name, size] of facetSizes) {
+        if (size !== DEFAULT_FACET_SIZE) params.set(`size_${name}`, String(size));
+      }
       const res = await fetch(`api/facets?${params}`);
       if (res.ok) {
         const data: FacetsResult = await res.json();
@@ -449,17 +461,22 @@
     }
   }
 
+  function loadMoreFacet(name: string) {
+    facetSizes = new Map(facetSizes).set(name, facetSize(name) + DEFAULT_FACET_SIZE);
+    fetchFacets();
+  }
+
   $effect(() => {
     if (filtersDropdownOpen) fetchFacets();
   });
 
-  // Invalidate cache when query or dates change so next open re-fetches
+  // Invalidate cache and reset sizes when query or dates change
   $effect(() => {
-    // track as dependencies
     const _q = query;
     const _df = dateFrom;
     const _dt = dateTo;
     facetsCache = new Map();
+    facetSizes = new Map();
   });
 
   function dateRangeForBucket(name: string): { from: string; to: string } {
@@ -1558,7 +1575,7 @@
                           {#if facetsLoading}
                             <p class="font-inter text-text-brand-muted text-xs">Loading filters…</p>
                           {:else}
-                            {#if currentFacets?.domains?.length}
+                            {#if currentFacets?.terms?.['domains']?.terms?.length}
                               <div class="space-y-1.5">
                                 <p
                                   class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold"
@@ -1567,7 +1584,7 @@
                                   Domains
                                 </p>
                                 <div class="flex flex-wrap gap-1">
-                                  {#each currentFacets.domains as { term, count } (term)}
+                                  {#each currentFacets.terms['domains'].terms as { term, count } (term)}
                                     <button
                                       class="font-inter cursor-pointer rounded-none border-[2px] px-2 py-0.5 text-xs transition-colors {activeDomainFilters.has(
                                         term,
@@ -1581,10 +1598,16 @@
                                     </button>
                                   {/each}
                                 </div>
+                                {#if currentFacets.terms['domains'].other}
+                                  <button
+                                    class="font-inter text-text-brand-muted hover:text-hister-indigo mt-1 cursor-pointer text-xs underline-offset-2 hover:underline"
+                                    onclick={() => loadMoreFacet('domains')}>Load more</button
+                                  >
+                                {/if}
                               </div>
                             {/if}
-                            {#if currentFacets?.languages?.length}
-                              {#if currentFacets?.domains?.length}
+                            {#if currentFacets?.terms?.['languages']?.terms?.length}
+                              {#if currentFacets?.terms?.['domains']?.terms?.length}
                                 <Separator class="bg-border-brand-muted" />
                               {/if}
                               <div class="space-y-1.5">
@@ -1595,7 +1618,7 @@
                                   Languages
                                 </p>
                                 <div class="flex flex-wrap gap-1">
-                                  {#each currentFacets.languages as { term, count } (term)}
+                                  {#each currentFacets.terms['languages'].terms as { term, count } (term)}
                                     <button
                                       class="font-inter cursor-pointer rounded-none border-[2px] px-2 py-0.5 text-xs transition-colors {activeLanguageFilters.has(
                                         term,
@@ -1609,10 +1632,16 @@
                                     </button>
                                   {/each}
                                 </div>
+                                {#if currentFacets.terms['languages'].other}
+                                  <button
+                                    class="font-inter text-text-brand-muted hover:text-hister-indigo mt-1 cursor-pointer text-xs underline-offset-2 hover:underline"
+                                    onclick={() => loadMoreFacet('languages')}>Load more</button
+                                  >
+                                {/if}
                               </div>
                             {/if}
                             {#if currentFacets?.date_histogram?.some((b) => b.count > 0)}
-                              {#if currentFacets?.domains?.length || currentFacets?.languages?.length}
+                              {#if currentFacets?.terms?.['domains']?.terms?.length || currentFacets?.terms?.['languages']?.terms?.length}
                                 <Separator class="bg-border-brand-muted" />
                               {/if}
                               <div class="space-y-1.5">
@@ -1640,7 +1669,7 @@
                                 </div>
                               </div>
                             {/if}
-                            {#if !currentFacets?.domains?.length && !currentFacets?.languages?.length && !currentFacets?.date_histogram?.some((b) => b.count > 0)}
+                            {#if !currentFacets?.terms?.['domains']?.terms?.length && !currentFacets?.terms?.['languages']?.terms?.length && !currentFacets?.date_histogram?.some((b) => b.count > 0)}
                               <p class="font-inter text-text-brand-muted text-xs">
                                 No filters available for this query.
                               </p>

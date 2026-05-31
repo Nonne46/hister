@@ -49,9 +49,13 @@ export interface RangeCount {
   count: number;
 }
 
+export interface TermFacet {
+  terms?: TermCount[];
+  other?: number;
+}
+
 export interface FacetsResult {
-  domains?: TermCount[];
-  languages?: TermCount[];
+  terms?: Record<string, TermFacet>;
   date_histogram?: RangeCount[];
 }
 

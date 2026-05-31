@@ -487,6 +487,12 @@ func init() {
 					Required:    false,
 					Description: "Unix timestamp upper bound for the added field",
 				},
+				{
+					Name:        "size_{name}",
+					Type:        "integer",
+					Required:    false,
+					Description: "Maximum number of terms for the named facet (e.g. size_domains=20, size_languages=10). Defaults to 10.",
+				},
 			},
 		},
 		{

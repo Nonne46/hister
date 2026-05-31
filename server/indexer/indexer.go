@@ -77,11 +77,11 @@ type Query struct {
 	PageKey           string  `json:"page_key"`
 	IncludeHTML       bool    `json:"include_html"`
 	IncludeText       bool    `json:"include_text"`
-	Facets            bool    `json:"facets,omitempty"`
-	// FacetTermSize overrides the default top-N cap for term facets
-	// (domain, language). Zero uses the default. Useful for completion
-	// callers that want to post-filter a larger pool by prefix.
-	FacetTermSize int `json:"facet_term_size,omitempty"`
+	Facets bool `json:"facets,omitempty"`
+	// FacetSizes overrides the default top-N cap per named facet.
+	// Key is the facet name (e.g. "domains", "languages"); zero/missing
+	// values fall back to defaultFacetTermSize.
+	FacetSizes map[string]int `json:"facet_sizes,omitempty"`
 	// FacetsOnly skips document fetching (size=0) and returns only facet
 	// counts. Requires Facets=true. Used by the /api/facets endpoint.
 	FacetsOnly bool `json:"facets_only,omitempty"`
@@ -109,10 +109,19 @@ type RangeCount struct {
 	Count int    `json:"count"`
 }
 
+// TermFacet holds the top-N terms for one named facet together with the count
+// of documents that matched terms outside the top-N (Other).
+type TermFacet struct {
+	Terms []TermCount `json:"terms,omitempty"`
+	Other int         `json:"other,omitempty"`
+}
+
 type FacetsResult struct {
-	Domains       []TermCount  `json:"domains,omitempty"`
-	Languages     []TermCount  `json:"languages,omitempty"`
-	DateHistogram []RangeCount `json:"date_histogram,omitempty"`
+	// Terms maps each term-facet name (e.g. "domains", "languages") to its
+	// result. Adding a new term facet only requires a new AddFacet call; no
+	// struct change is needed.
+	Terms         map[string]TermFacet `json:"terms,omitempty"`
+	DateHistogram []RangeCount         `json:"date_histogram,omitempty"`
 }
 
 // dateFacetBuckets drives the "added" histogram. Each entry is a non-
@@ -130,12 +139,15 @@ var dateFacetBuckets = []struct {
 	{"last_year", 365 * 24 * time.Hour},
 }
 
-func addFacets(req *bleve.SearchRequest, termSize int) {
-	if termSize <= 0 {
-		termSize = defaultFacetTermSize
+func addFacets(req *bleve.SearchRequest, sizes map[string]int) {
+	facetSize := func(name string) int {
+		if n := sizes[name]; n > 0 {
+			return n
+		}
+		return defaultFacetTermSize
 	}
-	req.AddFacet("domains", bleve.NewFacetRequest("domain", termSize))
-	req.AddFacet("languages", bleve.NewFacetRequest("language", termSize))
+	req.AddFacet("domains", bleve.NewFacetRequest("domain", facetSize("domains")))
+	req.AddFacet("languages", bleve.NewFacetRequest("language", facetSize("languages")))
 	now := time.Now()
 	dh := bleve.NewFacetRequest("added", len(dateFacetBuckets)+1)
 	var prev *float64
@@ -148,22 +160,24 @@ func addFacets(req *bleve.SearchRequest, termSize int) {
 	req.AddFacet("added", dh)
 }
 
-func extractTermFacet(f *search.FacetResult) []TermCount {
+func extractTermFacet(f *search.FacetResult) TermFacet {
 	if f == nil || f.Terms == nil {
-		return nil
+		return TermFacet{}
 	}
 	terms := f.Terms.Terms()
 	out := make([]TermCount, 0, len(terms))
 	for _, t := range terms {
 		out = append(out, TermCount{Term: t.Term, Count: t.Count})
 	}
-	return out
+	return TermFacet{Terms: out, Other: f.Other}
 }
 
 func extractFacets(facets search.FacetResults) *FacetsResult {
-	fr := &FacetsResult{
-		Domains:   extractTermFacet(facets["domains"]),
-		Languages: extractTermFacet(facets["languages"]),
+	fr := &FacetsResult{Terms: make(map[string]TermFacet)}
+	for _, name := range []string{"domains", "languages"} {
+		if f := facets[name]; f != nil {
+			fr.Terms[name] = extractTermFacet(f)
+		}
 	}
 	if f := facets["added"]; f != nil {
 		for _, nr := range f.NumericRanges {
@@ -1043,7 +1057,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	}
 
 	if q.Facets {
-		addFacets(req, q.FacetTermSize)
+		addFacets(req, q.FacetSizes)
 	}
 
 	res, err := i.idx.Search(req)
