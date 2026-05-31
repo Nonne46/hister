@@ -1572,7 +1572,7 @@
                         {/snippet}
                       </DropdownMenu.Trigger>
                       <DropdownMenu.Content
-                        class="border-brutal-border bg-card-surface w-72 rounded-none border-[3px] p-3 shadow-[4px_4px_0_var(--brutal-shadow)]"
+                        class="border-brutal-border bg-card-surface w-80 rounded-none border-[3px] p-3 shadow-[4px_4px_0_var(--brutal-shadow)]"
                       >
                         <div class="space-y-3">
                           {#if facetsLoading}
@@ -1643,6 +1643,34 @@
                                 {/if}
                               </div>
                             {/if}
+                            {#snippet customDateInputs()}
+                              <details class="group/custom w-full">
+                                <summary
+                                  class="font-inter text-text-brand-muted hover:text-hister-indigo cursor-pointer list-none text-xs underline-offset-2 hover:underline"
+                                  >Custom</summary
+                                >
+                                <div
+                                  class="mt-1.5 grid grid-cols-[auto_1fr] items-center gap-x-1.5 gap-y-2"
+                                >
+                                  <span class="font-inter text-text-brand-secondary text-xs"
+                                    >From:</span
+                                  >
+                                  <Input
+                                    type="date"
+                                    bind:value={dateFrom}
+                                    class="border-border-brand-muted bg-card-surface text-text-brand font-fira focus-visible:border-hister-indigo h-7 w-auto min-w-0 border-[2px] px-2 text-xs shadow-none focus-visible:ring-0"
+                                  />
+                                  <span class="font-inter text-text-brand-secondary text-xs"
+                                    >To:</span
+                                  >
+                                  <Input
+                                    type="date"
+                                    bind:value={dateTo}
+                                    class="border-border-brand-muted bg-card-surface text-text-brand font-fira focus-visible:border-hister-indigo h-7 w-auto min-w-0 border-[2px] px-2 text-xs shadow-none focus-visible:ring-0"
+                                  />
+                                </div>
+                              </details>
+                            {/snippet}
                             {#if currentFacets?.date_histogram?.some((b) => b.count > 0)}
                               {#if currentFacets?.terms?.['domains']?.terms?.length || currentFacets?.terms?.['languages']?.terms?.length}
                                 <Separator class="bg-border-brand-muted" />
@@ -1652,7 +1680,7 @@
                                   class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold"
                                 >
                                   <Calendar class="size-3" />
-                                  Date Added
+                                  Date
                                 </p>
                                 <div class="flex flex-col gap-1">
                                   {#each currentFacets.date_histogram as { name, count } (name)}
@@ -1670,6 +1698,17 @@
                                     {/if}
                                   {/each}
                                 </div>
+                                {@render customDateInputs()}
+                              </div>
+                            {:else}
+                              <div class="space-y-1.5">
+                                <p
+                                  class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold"
+                                >
+                                  <Calendar class="size-3" />
+                                  Date
+                                </p>
+                                {@render customDateInputs()}
                               </div>
                             {/if}
                             {#if !currentFacets?.terms?.['domains']?.terms?.length && !currentFacets?.terms?.['languages']?.terms?.length && !currentFacets?.date_histogram?.some((b) => b.count > 0)}
@@ -1707,37 +1746,6 @@
                       class="border-brutal-border bg-card-surface w-80 rounded-none border-[3px] p-3 shadow-[4px_4px_0_var(--brutal-shadow)]"
                     >
                       <div class="space-y-3">
-                        <div class="space-y-2">
-                          <p
-                            class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold"
-                          >
-                            <Calendar class="size-3" />
-                            Date Filter
-                          </p>
-                          <div class="flex flex-col gap-2">
-                            <label
-                              class="font-inter text-text-brand-secondary flex items-center gap-1.5 text-xs"
-                            >
-                              From:
-                              <Input
-                                type="date"
-                                bind:value={dateFrom}
-                                class="border-border-brand-muted bg-card-surface text-text-brand font-fira focus-visible:border-hister-indigo h-7 flex-1 border-[2px] px-2 text-xs shadow-none focus-visible:ring-0"
-                              />
-                            </label>
-                            <label
-                              class="font-inter text-text-brand-secondary flex items-center gap-1.5 text-xs"
-                            >
-                              To:
-                              <Input
-                                type="date"
-                                bind:value={dateTo}
-                                class="border-border-brand-muted bg-card-surface text-text-brand font-fira focus-visible:border-hister-indigo h-7 flex-1 border-[2px] px-2 text-xs shadow-none focus-visible:ring-0"
-                              />
-                            </label>
-                          </div>
-                        </div>
-                        <Separator class="bg-border-brand-muted" />
                         {#if config.semanticEnabled && semanticOn}
                           <div class="space-y-2">
                             <p
