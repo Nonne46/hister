@@ -307,7 +307,7 @@
         </span>
       {/if}
       {#if meta?.description}
-        <p class="font-inter text-text-brand-secondary mt-1 line-clamp-3 text-sm">
+        <p class="font-inter text-text-brand-secondary mt-1 max-w-[60em] line-clamp-3 text-sm">
           {meta.description}
         </p>
       {/if}
