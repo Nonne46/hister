@@ -5,9 +5,8 @@ package embeddedvideo
 
 import (
 	"bytes"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -17,33 +16,41 @@ import (
 	"github.com/asciimoo/hister/server/types"
 )
 
-// knownVideoHosts is the set of hostname substrings that identify an iframe
-// src as a video embed. Only the relevant path fragment is checked so that
-// both www.youtube.com and youtube.com match.
+// videoEntry holds a single embedded video found in a document.
+type videoEntry struct {
+	URL  string `json:"url"`
+	Type string `json:"type"`           // "iframe", "video", "embed", "object"
+	Mime string `json:"mime,omitempty"` // MIME type when available
+}
+
+// knownVideoHosts contains full https:// URL prefixes for known video hosting
+// services. Prefix matching prevents a malicious URL like
+// https://evil.com/youtube.com/embed/ from being accepted.
 var knownVideoHosts = []string{
 	"https://youtube.com/embed/",
+	"https://www.youtube.com/embed/",
 	"https://youtube.com/v/",
+	"https://www.youtube.com/v/",
 	"https://youtu.be/",
 	"https://player.vimeo.com/video/",
 	"https://vimeo.com/video/",
-	"https://dailymotion.com/embed/",
+	"https://www.dailymotion.com/embed/",
 	"https://bitchute.com/embed/",
+	"https://www.bitchute.com/embed/",
 	"https://rumble.com/embed/",
-	"https://twitch.tv/embed/",
-	"https://facebook.com/plugins/video",
-	"https://instagram.com/p/",
-	"https://tiktok.com/embed/",
+	"https://player.twitch.tv/",
+	"https://www.facebook.com/plugins/video",
+	"https://www.instagram.com/p/",
+	"https://www.tiktok.com/embed/",
 	"https://ok.ru/videoembed/",
 	"https://rutube.ru/play/embed/",
-	"https://ted.com/talks/",
-	"https://wistia.com/medias/",
-	"https://jwplatform.com/players/",
+	"https://www.ted.com/talks/",
+	"https://fast.wistia.com/embed/",
 	"https://cdn.jwplayer.com/players/",
-	"https://brightcove.net/services/mobile/streaming/index/",
-	"https://metacafe.com/embed/",
+	"https://players.brightcove.net/",
+	"https://www.metacafe.com/embed/",
 	"https://streamable.com/e/",
 	"https://odysee.com/$/embed/",
-	"https://peertube.",
 }
 
 // htmlQuickCheck holds the byte strings used for a cheap pre-scan. If none
@@ -96,12 +103,15 @@ func (e *EmbeddedVideoExtractor) Match(d *document.Document) bool {
 }
 
 // Extract scans d.HTML for video embedding elements and appends any
-// discovered URLs to d.Metadata["videos"]. It always returns
+// discovered videos to d.Metadata["videos"]. It always returns
 // ExtractorContinue so that text-extraction extractors still run.
 func (e *EmbeddedVideoExtractor) Extract(d *document.Document) (types.ExtractorState, error) {
-	videos := extractVideoURLs(d.HTML)
+	videos := extractVideos(d.HTML)
 	if len(videos) > 0 {
-		d.AddMetadata("videos", videos)
+		raw, err := json.Marshal(videos)
+		if err == nil {
+			d.AddMetadata("videos", string(raw))
+		}
 	}
 	return types.ExtractorContinue, nil
 }
@@ -111,22 +121,23 @@ func (e *EmbeddedVideoExtractor) Preview(d *document.Document) (types.PreviewRes
 	return types.PreviewResponse{}, types.ExtractorContinue, nil
 }
 
-// extractVideoURLs tokenizes raw HTML and returns all video embed URLs found
-// in iframe/video/source/embed/object elements.
-func extractVideoURLs(rawHTML string) []string {
-	var videos []string
+// extractVideos tokenizes raw HTML and returns all embedded video entries
+// found in iframe/video/source/embed/object elements, preserving the original
+// embedding type of each one.
+func extractVideos(rawHTML string) []videoEntry {
+	var videos []videoEntry
 	seen := make(map[string]struct{})
 
-	add := func(u string) {
-		u = strings.TrimSpace(u)
-		if u == "" {
+	add := func(e videoEntry) {
+		e.URL = strings.TrimSpace(e.URL)
+		if e.URL == "" {
 			return
 		}
-		if _, dup := seen[u]; dup {
+		if _, dup := seen[e.URL]; dup {
 			return
 		}
-		seen[u] = struct{}{}
-		videos = append(videos, u)
+		seen[e.URL] = struct{}{}
+		videos = append(videos, e)
 	}
 
 	z := html.NewTokenizer(bytes.NewReader([]byte(rawHTML)))
@@ -135,36 +146,34 @@ func extractVideoURLs(rawHTML string) []string {
 		tt := z.Next()
 		switch tt {
 		case html.ErrorToken:
-			if errors.Is(z.Err(), io.EOF) {
-				return videos
-			}
 			return videos
 		case html.StartTagToken, html.SelfClosingTagToken:
 			name, hasAttr := z.TagName()
+			attrs := readAttrs(z, hasAttr)
 			tag := string(name)
 			switch tag {
 			case "video":
 				inVideo = true
-				if src := attrVal(z, hasAttr, "src"); src != "" {
-					add(src)
+				if src := attrs["src"]; src != "" {
+					add(videoEntry{URL: src, Type: "video", Mime: attrs["type"]})
 				}
 			case "source":
 				if inVideo {
-					if src := attrVal(z, hasAttr, "src"); src != "" {
-						add(src)
+					if src := attrs["src"]; src != "" {
+						add(videoEntry{URL: src, Type: "video", Mime: attrs["type"]})
 					}
 				}
 			case "iframe":
-				if src := attrVal(z, hasAttr, "src"); src != "" && isVideoEmbedURL(src) {
-					add(src)
+				if src := attrs["src"]; src != "" && isVideoEmbedURL(src) {
+					add(videoEntry{URL: src, Type: "iframe"})
 				}
 			case "embed":
-				if src := attrVal(z, hasAttr, "src"); src != "" && isVideoEmbedURL(src) {
-					add(src)
+				if src := attrs["src"]; src != "" && isVideoEmbedURL(src) {
+					add(videoEntry{URL: src, Type: "embed", Mime: attrs["type"]})
 				}
 			case "object":
-				if data := attrVal(z, hasAttr, "data"); data != "" && isVideoEmbedURL(data) {
-					add(data)
+				if data := attrs["data"]; data != "" && isVideoEmbedURL(data) {
+					add(videoEntry{URL: data, Type: "object", Mime: attrs["type"]})
 				}
 			}
 		case html.EndTagToken:
@@ -174,6 +183,21 @@ func extractVideoURLs(rawHTML string) []string {
 			}
 		}
 	}
+}
+
+// readAttrs reads all attributes from the current token into a lowercase-keyed
+// map. First occurrence of each key wins (mirrors browser behaviour).
+func readAttrs(z *html.Tokenizer, hasAttr bool) map[string]string {
+	attrs := make(map[string]string)
+	for hasAttr {
+		var k, v []byte
+		k, v, hasAttr = z.TagAttr()
+		key := strings.ToLower(string(k))
+		if _, exists := attrs[key]; !exists {
+			attrs[key] = string(v)
+		}
+	}
+	return attrs
 }
 
 // attrVal reads all attributes from the current token and returns the value
@@ -189,12 +213,12 @@ func attrVal(z *html.Tokenizer, hasAttr bool, wantKey string) string {
 	return ""
 }
 
-// isVideoEmbedURL returns true when the URL belongs to a known video
-// hosting / embed service.
+// isVideoEmbedURL returns true when the URL matches a known video
+// hosting / embed service by full https:// prefix.
 func isVideoEmbedURL(u string) bool {
 	lower := strings.ToLower(u)
-	for _, host := range knownVideoHosts {
-		if strings.HasPrefix(lower, host) {
+	for _, prefix := range knownVideoHosts {
+		if strings.HasPrefix(lower, prefix) {
 			return true
 		}
 	}
