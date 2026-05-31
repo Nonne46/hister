@@ -6,7 +6,7 @@
 //
 // Specification: https://modelcontextprotocol.io/specification/2024-11-05
 //
-// Only the search tool is exposed. The handler lives at POST /mcp and uses
+// Exposed tools: search, get_preview. The handler lives at POST /mcp and uses
 // the same authentication as the rest of the API. Bearer tokens are accepted
 // via the standard Authorization header and are resolved by the global auth
 // middleware (withTokenAuth / populateUserContext).
@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/asciimoo/hister/server/extractor"
 	"github.com/asciimoo/hister/server/indexer"
 
 	"github.com/rs/zerolog/log"
@@ -163,6 +164,24 @@ func mcpToolList() []map[string]any {
 				"required": []string{"query"},
 			},
 		},
+		{
+			"name":        "get_preview",
+			"description": "Retrieve the full preview of an indexed document by URL. Returns the page title, extracted text content, indexing date, and all available metadata (author, description, publication date, language, content type, JSON-LD structured data, embedded videos, etc.).",
+			"inputSchema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"url": map[string]any{
+						"type":        "string",
+						"description": "The exact URL of the indexed document to preview.",
+					},
+					"extractor": map[string]any{
+						"type":        "string",
+						"description": "Name of the extractor to use for rendering the preview. Omit to use the default extractor.",
+					},
+				},
+				"required": []string{"url"},
+			},
+		},
 	}
 }
 
@@ -179,6 +198,8 @@ func mcpCallTool(c *webContext, req mcpRequest) {
 	switch params.Name {
 	case "search":
 		mcpToolSearch(c, req.ID, params.Arguments)
+	case "get_preview":
+		mcpToolGetPreview(c, req.ID, params.Arguments)
 	default:
 		mcpWriteError(c, req.ID, mcpErrNotFound, "unknown tool: "+params.Name)
 	}
@@ -252,6 +273,85 @@ func mcpToolSearch(c *webContext, id json.RawMessage, rawArgs json.RawMessage) {
 			{Type: "text", Text: mcpFormatResults(args.Query, res, args.Fields)},
 		},
 	})
+}
+
+type mcpGetPreviewArgs struct {
+	URL       string `json:"url"`
+	Extractor string `json:"extractor"`
+}
+
+// mcpToolGetPreview retrieves the stored preview for a document and returns its
+// full content together with all available metadata.
+func mcpToolGetPreview(c *webContext, id json.RawMessage, rawArgs json.RawMessage) {
+	var args mcpGetPreviewArgs
+	if len(rawArgs) > 0 {
+		if err := json.Unmarshal(rawArgs, &args); err != nil {
+			mcpWriteError(c, id, mcpErrInvalidParam, "invalid get_preview arguments: "+err.Error())
+			return
+		}
+	}
+	if args.URL == "" {
+		mcpWriteError(c, id, mcpErrInvalidParam, "url is required")
+		return
+	}
+
+	doc := indexer.GetByURLAndUser(args.URL, c.UserID)
+	if doc == nil {
+		mcpWriteError(c, id, mcpErrNotFound, "document not found: "+args.URL)
+		return
+	}
+
+	var content string
+	if doc.HTML == "" {
+		content = doc.Text
+	} else {
+		resp, err := extractor.Preview(doc, args.Extractor)
+		if err != nil {
+			log.Warn().Err(err).Str("url", args.URL).Msg("MCP get_preview extractor failed")
+			content = doc.Text
+		} else {
+			content = resp.Content
+		}
+	}
+
+	mcpWriteResult(c, id, map[string]any{
+		"content": []mcpTextContent{
+			{Type: "text", Text: mcpFormatPreview(doc.Title, args.URL, doc.Added, doc.GetPreviewMeta(), content)},
+		},
+	})
+}
+
+// mcpFormatPreview renders a document preview as a human-readable text block
+// with title, URL, indexing date, all metadata fields, and extracted content.
+func mcpFormatPreview(title, url string, added int64, meta map[string]any, content string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Title: %s\n", title)
+	fmt.Fprintf(&b, "URL: %s\n", url)
+	fmt.Fprintf(&b, "Indexed: %s\n", time.Unix(added, 0).Format("2006-01-02"))
+
+	if meta != nil {
+		for _, k := range []string{"author", "published", "modified", "description", "site_name", "type", "language", "image"} {
+			if v, ok := meta[k].(string); ok && v != "" {
+				fmt.Fprintf(&b, "%s: %s\n", strings.Title(k), v) //nolint:staticcheck
+			}
+		}
+		if nodes, ok := meta["jsonld"].([]map[string]any); ok && len(nodes) > 0 {
+			if raw, err := json.Marshal(nodes); err == nil {
+				fmt.Fprintf(&b, "JSON-LD: %s\n", raw)
+			}
+		}
+		if videos, ok := meta["videos"].([]map[string]any); ok && len(videos) > 0 {
+			fmt.Fprintf(&b, "Embedded videos (%d):\n", len(videos))
+			for _, v := range videos {
+				fmt.Fprintf(&b, "  - %s (%s)\n", v["url"], v["type"])
+			}
+		}
+	}
+
+	if t := strings.TrimSpace(content); t != "" {
+		fmt.Fprintf(&b, "\n--- Content ---\n%s\n", t)
+	}
+	return b.String()
 }
 
 // mcpFormatResults renders search results as a human-readable text block.
