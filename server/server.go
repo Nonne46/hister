@@ -780,7 +780,13 @@ func serveSearchWebSocket(c *webContext) {
 
 func serveSearch(c *webContext) {
 	origin := c.Request.Header.Get("Origin")
-	if !c.Config.IsSameHost(origin) {
+	// `?format=json` (or `Accept: application/json`) opts the caller into a
+	// pure JSON response and skips the same-host Origin check, so CLI tools
+	// and ad-hoc HTTP clients can hit the search endpoint without spoofing
+	// a hister:// Origin header.
+	jsonFormat := c.Request.URL.Query().Get("format") == "json" ||
+		c.Request.Header.Get("Accept") == "application/json"
+	if !jsonFormat && !c.Config.IsSameHost(origin) {
 		serve500(c)
 		log.Info().Str("Origin", origin).Msg("Invalid origin")
 		return
@@ -788,6 +794,11 @@ func serveSearch(c *webContext) {
 	query, err := parseSearchQueryParams(c.Request)
 	if err != nil {
 		c.Response.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if jsonFormat && query.Text == "" {
+		c.Response.WriteHeader(http.StatusBadRequest)
+		_, _ = c.Response.Write([]byte(`{"error":"text query required for format=json"}`))
 		return
 	}
 	if query.Text != "" {
