@@ -126,7 +126,11 @@
       Datasets
     </h1>
     <p class="font-inter mt-3 max-w-[70em] text-base text-(--text-secondary)">
-      Public datasets you can import into Hister to extend your local index.
+      Public datasets you can import into Hister to extend your local index. <a
+        href="https://github.com/asciimoo/hister"
+        class="font-space border-brutal-border brutal-press border-[2px] bg-(--hister-cyan) px-4 py-2.5 text-[12px] font-bold tracking-[1px] text-white uppercase no-underline"
+        >Submit new dataset</a
+      >
     </p>
   </div>
 
