@@ -231,13 +231,14 @@ var (
 		// https://github.com/blevesearch/bleve/blob/master/docs/persister.md
 		"scorchPersisterOptions": map[string]any{
 			"NumPersisterWorkers":           4,
-			"MaxSizeInMemoryMergePerWorker": 80 * 1024 * 1024, // bytes
+			"MaxSizeInMemoryMergePerWorker": 40 * 1024 * 1024, // bytes
 			// default is 1000. With 200 we increases persisting occurences to reduce memory usage
 			// https://github.com/blevesearch/bleve/blob/master/index/scorch/persister.go
 			"PersisterNapUnderNumFiles": 200,
 		},
 		"scorchMergePlanOptions": map[string]any{
 			"FloorSegmentFileSize": 20 * 1024 * 1024, // bytes
+			"SegmentsPerMergeTask": 4,                // default is 10
 		},
 	}
 )
