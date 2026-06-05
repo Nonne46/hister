@@ -285,7 +285,7 @@ func (e *basicExtractor) Match(_ *document.Document) bool {
 
 func (e *basicExtractor) Extract(d *document.Document) (types.ExtractorState, error) {
 	d.Title = ""
-	r := bytes.NewReader([]byte(d.HTML))
+	r := strings.NewReader(d.HTML)
 	doc := html.NewTokenizer(r)
 	inBody := false
 	skip := false
@@ -351,7 +351,7 @@ func (e *readabilityExtractor) Match(_ *document.Document) bool {
 }
 
 func (e *readabilityExtractor) Extract(d *document.Document) (types.ExtractorState, error) {
-	r := bytes.NewReader([]byte(d.HTML))
+	r := strings.NewReader(d.HTML)
 
 	u, err := url.Parse(d.URL)
 	if err != nil {
@@ -400,7 +400,7 @@ func writeReadabilityMeta(d *document.Document, a readability.Article) {
 }
 
 func (e *readabilityExtractor) Preview(d *document.Document) (types.PreviewResponse, types.ExtractorState, error) {
-	r := bytes.NewReader([]byte(d.HTML))
+	r := strings.NewReader(d.HTML)
 	u, err := url.Parse(d.URL)
 	if err != nil {
 		return types.PreviewResponse{}, types.ExtractorStop, err
