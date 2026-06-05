@@ -17,7 +17,7 @@
   import { ScrollArea } from '@hister/components/ui/scroll-area';
   import { PageHeader } from '@hister/components';
   import { StatusMessage, PreviewPanel } from '$lib/components';
-  import { Search, Clock, Trash2, Eye } from '@lucide/svelte';
+  import { CalendarDays, Clock, Eye, ListFilter, Search, Trash2, X } from '@lucide/svelte';
 
   let items: HistoryItem[] = $state([]);
   let loading = $state(true);
@@ -88,7 +88,6 @@
       panelUrl = url;
       return;
     }
-    // Mobile: open fullscreen preview
     panelUrl = url;
     panelHintTitle = title;
     previewFullscreen = true;
@@ -215,6 +214,7 @@
   });
 
   const groups = $derived.by(() => groupByDate(filteredItems));
+  const allCount = $derived(filteredItems.length);
 
   function getGroupColor(idx: number): string {
     return groupColors[idx % groupColors.length];
@@ -245,6 +245,14 @@
     if (sentinel) {
       getScrollParent(sentinel.parentElement)?.scrollTo({ top: 0, behavior: 'instant' });
     }
+  }
+
+  function clearFilter() {
+    filter = '';
+  }
+
+  function groupCount(group: { key: string; items: HistoryItem[] }): number {
+    return group.items.length;
   }
 
   async function loadItems(latest: string = '') {
@@ -465,33 +473,50 @@
   <title>Hister - History</title>
 </svelte:head>
 
-<header
-  class="bg-card-surface border-brutal-border flex shrink-0 items-center justify-between gap-2 overflow-hidden border-b-[3px] px-3 py-3 md:px-6"
->
-  <PageHeader color="hister-indigo" size="xs" class="min-w-0 shrink-0" truncate>History</PageHeader>
-  <nav class="flex min-w-0 shrink-0 items-center gap-2 md:gap-3">
-    <label
-      class="font-inter text-text-brand-secondary flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-semibold select-none"
-    >
-      <input
-        type="checkbox"
-        bind:checked={openedOnly}
-        class="accent-hister-indigo size-3.5 cursor-pointer"
-      />
-      <span class="hidden md:inline">Show only opened results</span>
-      <span class="md:hidden">Opened</span>
-    </label>
-    <div
-      class="border-brutal-border bg-page-bg flex h-8 min-w-0 items-center gap-2 border-[3px] px-2 md:px-3"
-    >
-      <Search class="text-text-brand-muted size-3.5 shrink-0" />
-      <Input
-        bind:value={filter}
-        placeholder="Filter..."
-        class="font-inter text-text-brand placeholder:text-text-brand-muted h-full w-20 border-0 bg-transparent p-0 text-xs font-medium shadow-none focus-visible:ring-0 md:w-40"
-      />
+<header class="border-brutal-border bg-card-surface shrink-0 border-b-[3px] px-3 py-3 md:px-6">
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex min-w-0 items-center gap-4">
+      <PageHeader color="hister-indigo" size="sm" class="min-w-0 shrink-0" truncate>
+        History
+      </PageHeader>
     </div>
-  </nav>
+
+    <nav class="grid min-w-0 gap-2 md:grid-cols-[minmax(16rem,28rem)_auto] md:items-center">
+      <div
+        class="border-brutal-border bg-page-bg flex h-11 min-w-0 items-center gap-2 border-[3px] px-3 shadow-[2px_2px_0_var(--brutal-shadow)]"
+      >
+        <Search class="text-text-brand-muted size-4 shrink-0" />
+        <Input
+          bind:value={filter}
+          placeholder="Filter title or URL"
+          aria-label="Filter history"
+          class="font-inter text-text-brand placeholder:text-text-brand-muted h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
+        />
+        {#if filter}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            class="text-text-brand-muted hover:bg-muted-surface hover:text-text-brand size-7 shrink-0"
+            aria-label="Clear history filter"
+            onclick={clearFilter}
+          >
+            <X class="size-4" />
+          </Button>
+        {/if}
+      </div>
+
+      <label
+        class="border-brutal-border bg-page-bg text-text-brand-secondary hover:bg-muted-surface flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 border-[3px] px-3 text-xs font-bold uppercase shadow-[2px_2px_0_var(--brutal-shadow)] select-none"
+      >
+        <input
+          type="checkbox"
+          bind:checked={openedOnly}
+          class="accent-hister-indigo size-4 cursor-pointer"
+        />
+        <span>Opened</span>
+      </label>
+    </nav>
+  </div>
 </header>
 
 {#if loading && items.length === 0}
@@ -505,22 +530,22 @@
     <!-- Timeline sidebar: hidden on mobile, shown on md+ -->
     {#if !previewFullscreen}
       <ScrollArea
-        class="border-brutal-border hidden w-70 shrink-0 border-r-[3px] pt-5 pr-3 md:block"
+        class="border-brutal-border bg-page-bg hidden w-72 shrink-0 border-r-[3px] md:block"
       >
-        <div class="space-y-1">
+        <div class="space-y-2 p-4">
           <span
-            class="font-space text-text-brand-muted flex items-center gap-1.5 px-2.5 text-xs font-bold tracking-[2px] uppercase"
+            class="font-space text-text-brand-muted flex items-center gap-2 px-1 text-xs font-bold uppercase"
           >
-            <Clock class="size-3" />
+            <CalendarDays class="size-3.5" />
             Timeline
           </span>
-          <Separator class="bg-border-brand-muted" />
+          <Separator class="bg-border-brand-muted h-[2px]" />
 
           <Button
             variant="ghost"
-            class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none px-2.5 py-1.5 {!filterByDate
-              ? 'bg-hister-indigo text-white hover:bg-(--hister-indigo)/90 hover:text-white'
-              : 'hover:bg-muted-surface'}"
+            class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none border-[2px] px-3 py-2 shadow-[2px_2px_0_transparent] hover:shadow-[2px_2px_0_var(--brutal-shadow)] {!filterByDate
+              ? 'border-brutal-border bg-hister-indigo text-primary-foreground hover:bg-hister-indigo/90 hover:text-primary-foreground'
+              : 'border-transparent hover:border-border-brand hover:bg-muted-surface'}"
             onclick={showAll}
           >
             <span
@@ -533,22 +558,22 @@
               variant="secondary"
               class="ml-auto h-4 shrink-0 border-0 px-1.5 py-0 text-xs {filterByDate
                 ? 'bg-muted-surface text-text-brand-muted'
-                : 'bg-white/20 text-white'}"
+                : 'bg-white/20 text-primary-foreground'}"
             >
-              {items.length}
+              {allCount}
             </Badge>
           </Button>
 
-          <Separator class="bg-border-brand-muted" />
+          <Separator class="bg-border-brand-muted h-[2px]" />
 
           {#each allGroups as group, i}
             {@const color = getGroupColor(i)}
             {@const isActive = filterByDate === group.key}
             <Button
               variant="ghost"
-              class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none px-2.5 py-1.5 {isActive
-                ? 'text-white hover:text-white'
-                : 'hover:bg-muted-surface'}"
+              class="flex h-auto w-full cursor-pointer items-center justify-start gap-2 rounded-none border-[2px] px-3 py-2 shadow-[2px_2px_0_transparent] hover:shadow-[2px_2px_0_var(--brutal-shadow)] {isActive
+                ? 'border-brutal-border text-primary-foreground hover:text-primary-foreground'
+                : 'border-transparent hover:border-border-brand hover:bg-muted-surface'}"
               style={isActive ? `background-color: ${getColorVar(color)};` : ''}
               onclick={() => scrollToGroup(group.key)}
             >
@@ -569,10 +594,10 @@
               <Badge
                 variant="secondary"
                 class="ml-auto h-4 shrink-0 border-0 px-1.5 py-0 text-xs {isActive
-                  ? 'bg-white/20 text-white'
+                  ? 'bg-white/20 text-primary-foreground'
                   : 'bg-muted-surface text-text-brand-muted'}"
               >
-                {group.items.length}
+                {groupCount(group)}
               </Badge>
             </Button>
           {/each}
@@ -583,17 +608,20 @@
     <!-- Mobile timeline: horizontal scrollable filter chips -->
     {#if !previewFullscreen}
       <div
-        class="border-brutal-border bg-card-surface flex shrink-0 items-center gap-2 overflow-x-auto border-b-[3px] px-4 py-2 md:hidden"
+        class="border-brutal-border bg-page-bg flex shrink-0 items-center gap-2 overflow-x-auto border-b-[3px] px-3 py-2 md:hidden"
       >
+        <span class="text-text-brand-muted flex shrink-0 items-center">
+          <ListFilter class="size-4" />
+        </span>
         <Button
           variant="ghost"
           size="sm"
-          class="font-inter h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold {!filterByDate
-            ? 'bg-hister-indigo hover:bg-hister-indigo/90 text-white hover:text-white'
+          class="font-inter border-brutal-border h-8 shrink-0 rounded-none border-[2px] px-3 text-xs font-bold {!filterByDate
+            ? 'bg-hister-indigo hover:bg-hister-indigo/90 text-primary-foreground hover:text-primary-foreground'
             : 'text-text-brand-secondary hover:bg-muted-surface'}"
           onclick={showAll}
         >
-          All ({filteredItems.length})
+          All ({allCount})
         </Button>
         {#each allGroups as group, i}
           {@const color = getGroupColor(i)}
@@ -601,13 +629,13 @@
           <Button
             variant="ghost"
             size="sm"
-            class="font-inter h-7 shrink-0 rounded-none px-2.5 text-xs font-medium {isActive
-              ? 'text-white hover:text-white'
+            class="font-inter border-brutal-border h-8 shrink-0 rounded-none border-[2px] px-3 text-xs font-semibold {isActive
+              ? 'text-primary-foreground hover:text-primary-foreground'
               : 'text-text-brand-secondary hover:bg-muted-surface'}"
             style={isActive ? `background-color: ${getColorVar(color)};` : ''}
             onclick={() => scrollToGroup(group.key)}
           >
-            {group.label} ({group.items.length})
+            {group.label} ({groupCount(group)})
           </Button>
         {/each}
       </div>
@@ -619,34 +647,44 @@
           orientation="vertical"
           class="min-h-0 max-w-full min-w-0 flex-1 overflow-x-hidden"
         >
-          <div class="w-full space-y-4 overflow-hidden px-3 py-3 md:space-y-6 md:px-6 md:py-5">
+          <div
+            class="mx-auto w-full max-w-5xl space-y-5 overflow-hidden px-3 py-3 md:space-y-7 md:px-6 md:py-5"
+          >
             {#each groups as group, gi}
               {@const color = getGlobalGroupColor(group.key)}
               {@const groupOffset = groups
                 .slice(0, gi)
                 .reduce((acc: number, g) => acc + g.items.length, 0)}
-              <div id="group-{encodeURIComponent(group.key)}" class="space-y-2">
-                <span class="font-outfit text-sm font-bold" style="color: {getColorVar(color)};"
-                  >{group.label}</span
-                >
-                <Separator class="h-0.5" style="background-color: {getColorVar(color)};" />
+              <section id="group-{encodeURIComponent(group.key)}" class="history-group">
+                <div class="history-group-header" style="--history-color: {getColorVar(color)};">
+                  <div class="min-w-0">
+                    <h2
+                      class="font-outfit text-text-brand truncate text-base font-black md:text-lg"
+                    >
+                      {group.label}
+                    </h2>
+                    <p class="font-fira text-text-brand-muted text-xs">
+                      {groupCount(group).toLocaleString()} entries
+                    </p>
+                  </div>
+                  <span class="history-group-count">{groupCount(group).toLocaleString()}</span>
+                </div>
 
-                <div class="space-y-0">
+                <div class="history-stack">
                   {#each group.items as item, ii}
                     {@const itemColor = color}
                     {@const flatIdx = groupOffset + ii}
                     <article
                       data-result
-                      class="bg-card-surface border-b-brutal-border flex items-start gap-2 overflow-hidden border-b-[3px] px-2.5 py-2 transition-all duration-150 md:items-center md:gap-3 md:px-3.5 md:py-2.5"
-                      style={flatIdx === highlightIdx
-                        ? `border-left: 6px solid ${getColorVar(itemColor)}; background: linear-gradient(90deg, transparent, rgba(90, 138, 138, 0.12), transparent);`
-                        : `border-left: 3px solid ${getColorVar(itemColor)};`}
+                      class="history-row flex items-start gap-3 overflow-hidden px-3 py-3 transition-all duration-150 md:items-center md:px-4"
+                      class:history-row-active={flatIdx === highlightIdx}
+                      style="--history-color: {getColorVar(itemColor)};"
                     >
-                      <div class="w-0 min-w-0 flex-1 space-y-0.5">
+                      <div class="w-0 min-w-0 flex-1 space-y-1">
                         <a
                           data-result-link={item.url}
                           href={item.url}
-                          class="font-outfit text-hister-cyan block truncate font-bold no-underline hover:underline md:text-lg"
+                          class="font-outfit text-hister-cyan block truncate text-base font-bold no-underline hover:underline md:text-lg"
                           target="_blank"
                           rel="noopener"
                           onclick={() => (highlightIdx = flatIdx)}
@@ -654,13 +692,13 @@
                           {(item.title || item.url).replace(/<[^>]*>/g, '')}
                         </a>
                         <div
-                          class="items-left flex flex-col gap-0 md:flex-row md:items-center md:gap-2"
+                          class="flex min-w-0 flex-col gap-1 md:flex-row md:items-center md:gap-2"
                         >
                           {#if item.added}
                             <span
-                              class="font-inter text-text-brand-muted text-xs whitespace-nowrap md:text-sm"
+                              class="font-inter bg-muted-surface text-text-brand-secondary w-fit px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap"
                               title={formatTimestamp(item.added)}
-                              >{formatRelativeTime(item.added)} ·</span
+                              >{formatRelativeTime(item.added)}</span
                             >
                           {/if}
                           <span
@@ -674,7 +712,9 @@
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            class="text-text-brand-muted hover:text-hister-teal size-7 shrink-0"
+                            class="text-text-brand-muted hover:bg-muted-surface hover:text-hister-teal size-8 shrink-0"
+                            aria-label="Preview entry"
+                            title="Preview"
                             onclick={() => {
                               highlightIdx = flatIdx;
                               openPreview(item.url, item.title || item.url);
@@ -686,7 +726,9 @@
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          class="text-text-brand-muted hover:text-hister-rose size-7 shrink-0"
+                          class="text-text-brand-muted hover:bg-muted-surface hover:text-hister-rose size-8 shrink-0"
+                          aria-label="Delete entry"
+                          title="Delete"
                           onclick={() => deleteItem(item)}
                         >
                           <Trash2 class="size-3.5" />
@@ -695,7 +737,7 @@
                     </article>
                   {/each}
                 </div>
-              </div>
+              </section>
             {/each}
           </div>
           {#if loading && items.length > 0}
@@ -743,3 +785,64 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .history-group {
+    min-width: 0;
+  }
+
+  .history-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0 0.65rem;
+    border-bottom: 3px solid var(--history-color);
+  }
+
+  .history-group-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 1.55rem;
+    padding: 0 0.45rem;
+    flex-shrink: 0;
+    color: var(--text-primary-brand);
+    font-family: var(--font-fira);
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--history-color) 18%, var(--muted-surface));
+    border: 2px solid color-mix(in srgb, var(--history-color) 55%, var(--border-brand));
+  }
+
+  .history-stack {
+    padding-top: 0.75rem;
+  }
+
+  .history-row {
+    border: 2px solid var(--border-muted-brand);
+    background-color: var(--card-surface);
+    box-shadow: 0 1px 0 color-mix(in srgb, white 6%, transparent) inset;
+  }
+
+  .history-row + .history-row {
+    border-top: 0;
+  }
+
+  .history-row-active {
+    border-color: color-mix(in srgb, var(--history-color) 60%, var(--border-brand));
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--history-color) 12%, transparent),
+        transparent 42%
+      ),
+      var(--card-surface);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--history-color) 32%, transparent) inset;
+  }
+
+  :global(.dark) .history-row {
+    box-shadow: 0 1px 0 color-mix(in srgb, white 8%, transparent) inset;
+  }
+</style>
