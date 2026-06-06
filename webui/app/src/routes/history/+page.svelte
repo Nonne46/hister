@@ -481,7 +481,18 @@
       </PageHeader>
     </div>
 
-    <nav class="grid min-w-0 gap-2 md:grid-cols-[minmax(16rem,28rem)_auto] md:items-center">
+    <nav class="grid min-w-0 gap-2 md:grid-cols-[auto_minmax(16rem,28rem)] md:items-center">
+      <label
+        class="font-inter text-text-brand-secondary flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-semibold select-none"
+      >
+        <input
+          type="checkbox"
+          bind:checked={openedOnly}
+          class="accent-hister-indigo size-3.5 cursor-pointer"
+        />
+        <span>Show only opened results</span>
+      </label>
+
       <div
         class="border-brutal-border bg-page-bg flex h-11 min-w-0 items-center gap-2 border-[3px] px-3 shadow-[2px_2px_0_var(--brutal-shadow)]"
       >
@@ -504,17 +515,6 @@
           </Button>
         {/if}
       </div>
-
-      <label
-        class="border-brutal-border bg-page-bg text-text-brand-secondary hover:bg-muted-surface flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 border-[3px] px-3 text-xs font-bold uppercase shadow-[2px_2px_0_var(--brutal-shadow)] select-none"
-      >
-        <input
-          type="checkbox"
-          bind:checked={openedOnly}
-          class="accent-hister-indigo size-4 cursor-pointer"
-        />
-        <span>Opened</span>
-      </label>
     </nav>
   </div>
 </header>
