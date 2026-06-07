@@ -76,15 +76,6 @@
 <div class="min-h-0 flex-1 overflow-y-auto">
   <div class="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 md:px-6 md:py-8">
     <section class="min-w-0 space-y-5">
-      <header class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div class="min-w-0">
-          <PageHeader color="hister-coral" size="md">Add entry</PageHeader>
-          <p class="font-inter text-text-brand-secondary mt-2 text-sm">
-            Create a searchable record from a URL, with optional title and content overrides.
-          </p>
-        </div>
-      </header>
-
       {#if message}
         <Alert.Root variant={isError ? 'error' : 'success'} class="border-[3px]">
           {#if isError}
@@ -109,7 +100,7 @@
                 <Card.Title
                   class="font-space text-card-foreground text-xl font-extrabold uppercase"
                 >
-                  Manual document
+                  Add document
                 </Card.Title>
                 <Card.Description class="font-inter text-text-brand-secondary text-sm">
                   URL is required. Title and content can be left empty.
@@ -175,7 +166,7 @@
                   class="focus-visible:border-hister-coral"
                 />
                 <p id="entry-url-help" class="font-inter text-text-brand-muted text-xs">
-                  Use the canonical URL for duplicate detection and future history matches.
+                  URL of the document
                 </p>
               </div>
             </div>
@@ -191,10 +182,8 @@
                   <Label for="entry-title" class="font-outfit text-text-brand text-sm font-black">
                     Title
                   </Label>
-                  <p
-                    class="font-fira text-text-brand-muted mt-1 text-[11px] font-semibold uppercase"
-                  >
-                    Optional
+                  <p class="font-fira text-hister-rose mt-1 text-[11px] font-semibold uppercase">
+                    Required
                   </p>
                 </div>
               </div>
@@ -205,12 +194,13 @@
                   variant="brutal"
                   bind:value={title}
                   placeholder="Page title"
+                  required
                   autocomplete="off"
                   aria-describedby="entry-title-help"
                   class="font-inter focus-visible:border-hister-coral"
                 />
                 <p id="entry-title-help" class="font-inter text-text-brand-muted text-xs">
-                  Leave blank to let the extractor use the page title.
+                  Title of the document
                 </p>
               </div>
             </div>
@@ -237,13 +227,13 @@
                 <Textarea
                   id="entry-content"
                   bind:value={text}
-                  placeholder="Paste page content"
+                  placeholder="Page content"
                   aria-describedby="entry-content-help"
                   class="bg-page-bg border-brutal-border font-inter text-text-brand placeholder:text-text-brand-muted focus-visible:border-hister-coral min-h-64 w-full resize-y rounded-none border-[3px] p-4 text-sm transition-colors outline-none focus-visible:ring-0"
                 />
                 <div class="flex items-center justify-between gap-3">
                   <p id="entry-content-help" class="font-inter text-text-brand-muted text-xs">
-                    Leave blank to fetch and extract content from the URL.
+                    Text content of the document
                   </p>
                   <span class="font-fira text-text-brand-muted shrink-0 text-xs">
                     {contentChars.toLocaleString()} chars
