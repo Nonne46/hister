@@ -1112,11 +1112,30 @@ document and submitted to the running server. Content is re-processed
 server-side from the stored HTML.
 
 The input file may be a plain JSON file or a 7z-compressed archive (.7z)
-containing a single JSON file.`,
+containing a single JSON file.
+
+Use --start-date and --end-date (format: YYYY-MM-DD) to only import
+documents whose "added" timestamp falls within the given date range.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		inputFile := args[0]
 		skip, _ := cmd.Flags().GetBool("skip-existing")
+
+		var startDate, endDate int64 = 0, 0
+		if v, _ := cmd.Flags().GetString("start-date"); v != "" {
+			t, err := time.Parse("2006-01-02", v)
+			if err != nil {
+				exit(1, "Invalid --start-date: "+err.Error())
+			}
+			startDate = t.Unix()
+		}
+		if v, _ := cmd.Flags().GetString("end-date"); v != "" {
+			t, err := time.Parse("2006-01-02", v)
+			if err != nil {
+				exit(1, "Invalid --end-date: "+err.Error())
+			}
+			endDate = t.AddDate(0, 0, 1).Unix() - 1
+		}
 
 		var reader io.Reader
 
@@ -1182,6 +1201,11 @@ containing a single JSON file.`,
 			if err := json.Unmarshal(line, &d); err != nil {
 				log.Warn().Err(err).Msg("Failed to parse document line, skipping")
 				errCount++
+				continue
+			}
+			if (startDate != 0 && d.Added < startDate) || (endDate != 0 && d.Added > endDate) {
+				log.Debug().Str("url", d.URL).Int64("added", d.Added).Msg("Skipping document outside of date range")
+				skipped++
 				continue
 			}
 			if skip {
@@ -1311,6 +1335,8 @@ func init() {
 	importCmd.Flags().StringToString("backend-option", nil, "Crawler backend option as key=value (repeatable, e.g. --backend-option exec_path=/usr/bin/chromium)")
 	importCmd.Flags().StringToString("header", nil, "Extra HTTP header as KEY=VALUE (repeatable, e.g. --header Accept-Language=en)")
 	importCmd.Flags().StringArray("cookie", nil, "HTTP cookie as Set-Cookie value (repeatable, e.g. --cookie \"session=abc; Domain=example.com\")")
+	importCmd.Flags().String("start-date", "", "only import documents added on or after this date (YYYY-MM-DD)")
+	importCmd.Flags().String("end-date", "", "only import documents added on or before this date (YYYY-MM-DD)")
 
 	createUserCmd.Flags().Bool("admin", false, "create user with admin privileges")
 
