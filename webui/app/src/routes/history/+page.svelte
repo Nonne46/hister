@@ -17,7 +17,7 @@
   import { ScrollArea } from '@hister/components/ui/scroll-area';
   import { PageHeader } from '@hister/components';
   import { StatusMessage, PreviewPanel } from '$lib/components';
-  import { CalendarDays, Clock, Eye, ListFilter, Search, Trash2, X } from '@lucide/svelte';
+  import { CalendarDays, Clock, Eye, ListFilter, Rss, Search, Trash2, X } from '@lucide/svelte';
 
   let items: HistoryItem[] = $state([]);
   let loading = $state(true);
@@ -311,6 +311,7 @@
   }
 
   const hasMore = $derived((!openedOnly && pageKey !== '') || (openedOnly && openedLastID > 0));
+  const rssUrl = $derived(`api/history?${openedOnly ? 'opened=true&' : ''}format=rss`);
 
   // Allow autoscroll only when no date filter is active, or when there are no
   // items from dates earlier than the selected date loaded yet.
@@ -471,6 +472,7 @@
 
 <svelte:head>
   <title>Hister - History</title>
+  <link rel="alternate" type="application/rss+xml" title="Hister History" href={rssUrl} />
 </svelte:head>
 
 <header class="border-brutal-border bg-card-surface shrink-0 border-b-[3px] px-3 py-3 md:px-6">
@@ -479,6 +481,14 @@
       <PageHeader color="hister-indigo" size="sm" class="min-w-0 shrink-0" truncate>
         History
       </PageHeader>
+      <a
+        href={rssUrl}
+        title="RSS feed"
+        aria-label="RSS feed"
+        class="text-(--text-secondary) transition-colors hover:text-[#f26522]"
+      >
+        <Rss size={20} />
+      </a>
     </div>
 
     <nav class="grid min-w-0 gap-2 md:grid-cols-[auto_minmax(16rem,28rem)] md:items-center">
