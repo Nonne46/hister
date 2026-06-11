@@ -172,7 +172,7 @@ func (s *sqliteVectorStore) Search(vector []float32, topK int, threshold float64
 		if err := rows.Scan(&chunkKey, &distance, &docID, &chunkIdx, &chunkText); err != nil {
 			return nil, fmt.Errorf("scan vector result: %w", err)
 		}
-		similarity := 1.0 - distance
+		similarity := 1.0 - (distance * distance / 2.0)
 		if similarity >= threshold {
 			results = append(results, Result{
 				DocID:      docID,

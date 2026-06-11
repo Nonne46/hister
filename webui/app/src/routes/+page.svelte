@@ -102,7 +102,7 @@
     openResultsOnNewTab: false,
     hotkeys: {},
     semanticEnabled: false,
-    similarityThreshold: 0.5,
+    similarityThreshold: 0.2,
     semanticWeight: 0.4,
   });
 
@@ -152,7 +152,7 @@
   // the first $effect run doesn't overwrite the saved value with the default.
   let semanticOn = $state(localStorage.getItem('hister-semantic-on') === 'true');
   let similarityThreshold = $state(
-    parseFloat(localStorage.getItem('hister-semantic-threshold') ?? 'NaN') || 0.5,
+    parseFloat(localStorage.getItem('hister-semantic-threshold') ?? 'NaN') || 0.2,
   );
   let semanticWeight = $state(
     parseFloat(localStorage.getItem('hister-semantic-weight') ?? 'NaN') || 0.4,
@@ -584,7 +584,7 @@
       sort: currentSort,
       dateFrom,
       dateTo,
-      semantic: { enabled: semanticOn && config.semanticEnabled, threshold: similarityThreshold },
+      semantic: { enabled: semanticOn && config.semanticEnabled, threshold: 0.2 },
       pageKey,
       limit: RESULTS_PER_PAGE,
     };
@@ -2365,8 +2365,11 @@
     gap: 0.5rem;
     overflow: hidden;
     border: 2px solid var(--border-muted-brand);
-    background:
-      linear-gradient(90deg, color-mix(in srgb, currentColor 8%, transparent), transparent 52%),
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, currentColor 8%, transparent),
+        transparent 52%
+      ),
       var(--card-surface);
     padding: 0.5rem 0.875rem;
     box-shadow: 2px 2px 0 var(--brutal-shadow);
@@ -2544,8 +2547,11 @@
   }
 
   :global(.dark) .home-stat-pill {
-    background:
-      linear-gradient(90deg, color-mix(in srgb, currentColor 11%, transparent), transparent 54%),
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, currentColor 11%, transparent),
+        transparent 54%
+      ),
       var(--card-surface);
     box-shadow:
       0 1px 0 color-mix(in srgb, white 8%, transparent) inset,
